@@ -1,77 +1,61 @@
-<!DOCTYPE html>
-<html lang="en-us">
-<head>
-    <meta charset="utf-8">
-    <title>Snow Rider 3D - Thrilling Skiing Adventure Game</title>
-    <link rel="stylesheet" href="TemplateData/style.css">
-    <script src="TemplateData/UnityProgress.js"></script>
-    <script src="Build/UnityLoader.js"></script>
+<script>
+window.addEventListener('load', async function() {
+    let monedas = prompt("¿Cuántas monedas quieres tener al empezar?", "100");
+    if (monedas !== null) monedas = Number(monedas);
 
-    <!-- ================= SCRIPT ROBUSTO PARA SOBRESCRIBIR MONEDAS ================= -->
-    <script>
-    window.addEventListener('load', async function() {
-        // 1) Preguntar al jugador cuántas monedas quiere
-        let monedas = prompt("¿Cuántas monedas quieres tener al empezar?", "100");
-        if (monedas !== null) monedas = Number(monedas);
+    async function setUnityCoins(value) {
+        return new Promise((resolve, reject) => {
+            let request = indexedDB.open(window.location.origin + "_playerprefs");
+            let dbInstance;
 
-        // 2) Función para sobrescribir IndexedDB de Unity WebGL
-        async function setUnityCoins(value) {
-            return new Promise((resolve, reject) => {
+            // Crear object store si no existe
+            request.onupgradeneeded = function(event) {
+                let db = event.target.result;
+                if (!db.objectStoreNames.contains("PlayerPrefs")) {
+                    db.createObjectStore("PlayerPrefs");
+                    console.log("[IndexedDB] Object store 'PlayerPrefs' creado.");
+                }
+            };
+
+            request.onsuccess = function(event) {
+                dbInstance = event.target.result;
                 try {
-                    // Unity WebGL suele usar IndexedDB con nombre: origin + "_playerprefs" o similar
-                    let request = indexedDB.open(window.location.origin + "_playerprefs");
-                    request.onupgradeneeded = request.onsuccess = function(event) {
-                        let db = event.target.result;
+                    let tx = dbInstance.transaction("PlayerPrefs", "readwrite");
+                    let store = tx.objectStore("PlayerPrefs");
+                    store.put({ coins: value }, "coins");
+                    console.log("[IndexedDB] Monedas sobrescritas:", value);
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = (e) => reject(e);
+                } catch (err) {
+                    reject(err);
+                }
+            };
 
-                        // Buscar object store, si no existe lo creamos
-                        if (db.objectStoreNames.length === 0) {
-                            db.createObjectStore("PlayerPrefs");
-                        }
+            request.onerror = function(e) {
+                reject(e);
+            };
+        });
+    }
 
-                        let tx = db.transaction(db.objectStoreNames[0], "readwrite");
-                        let store = tx.objectStore(db.objectStoreNames[0]);
+    try {
+        await setUnityCoins(monedas);
+    } catch(e) {
+        console.warn("[IndexedDB] Error al sobrescribir monedas:", e);
+    }
 
-                        // Sobrescribir directamente la clave "coins"
-                        store.put({ coins: value }, "coins");
-                        console.log("[IndexedDB] Monedas sobrescritas:", value);
-
-                        tx.oncomplete = () => resolve(true);
-                        tx.onerror = (e) => reject(e);
-                    };
-                    request.onerror = (e) => reject(e);
-                } catch (err) { reject(err); }
-            });
-        }
-
-        // 3) Esperar un pequeño delay y sobrescribir monedas
-        try {
-            await setUnityCoins(monedas);
-        } catch(e) {
-            console.warn("[IndexedDB] No se pudo sobrescribir monedas:", e);
-        }
-
-        // 4) Iniciar Unity
-        window.gameInstance = UnityLoader.instantiate(
-            "gameContainer",
-            "Build/SnowRider3D-gd-1.json",
-            {
-                onProgress: UnityProgress,
-                Module: {
-                    onRuntimeInitialized: function() {
-                        UnityProgress(window.gameInstance, "complete");
-                        console.log("[Unity] Juego cargado y listo con monedas:", monedas);
-                    }
+    // Iniciar Unity
+    window.gameInstance = UnityLoader.instantiate(
+        "gameContainer",
+        "Build/SnowRider3D-gd-1.json",
+        {
+            onProgress: UnityProgress,
+            Module: {
+                onRuntimeInitialized: function() {
+                    UnityProgress(window.gameInstance, "complete");
+                    console.log("[Unity] Juego cargado con monedas:", monedas);
                 }
             }
-        );
-    });
-    </script>
-    <!-- ======================================================================== -->
-
-</head>
-<body style="overflow:hidden;padding:0;margin:0;">
-    <div class="webgl-content">
-        <div id="gameContainer" style="width:960px; height:600px; margin:auto;"></div>
-    </div>
-</body>
-</html>
+        }
+    );
+});
+</script>
