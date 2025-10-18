@@ -2,57 +2,82 @@
 <html lang="en-us">
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Snow Rider 3D - Thrilling Skiing Adventure Game</title>
-    <meta name="description" content="Immerse yourself in Snow Rider 3D, a thrilling skiing adventure game set in breathtaking mountain landscapes. Ride your sleigh down snowy slopes, dodge obstacles, and collect gifts for an exhilarating experience.">
-    <meta name="theme-color" content="#007ACC">
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="author" content="Your Name">
-    <meta name="keywords" content="Snow Rider 3D, skiing game, winter sports, snowboarding, ski game, mountain landscapes, skiing adventure, snowboarding adventure, snowy mountain, sleigh ride, winter game">
     <script src="TemplateData/UnityProgress.js"></script>
     <script src="Build/UnityLoader.js"></script>
 
-    <!-- ================== SCRIPT FINAL: PROMPT ANTES DE UNITY ================== -->
+    <!-- ================= SCRIPT AVANZADO PARA SOBRESCRIBIR MONEDAS ================= -->
     <script>
-    window.addEventListener('load', function() {
-        // 1) Preguntar al usuario cuántas monedas quiere
+    window.addEventListener('load', async function() {
+        // 1) Preguntar al jugador la cantidad de monedas
         let monedas = prompt("¿Cuántas monedas quieres tener al empezar?", "100");
-        if (monedas !== null) {
-            monedas = String(monedas);
+        if (monedas !== null) monedas = Number(monedas);
 
-            // 2) Guardar en localStorage
-            try {
-                localStorage.setItem("coins", monedas);
-                console.log("[PreLoad] Monedas guardadas en localStorage:", monedas);
-            } catch (e) {
-                console.warn("[PreLoad] No se pudo guardar en localStorage:", e);
-            }
+        // 2) Sobrescribir PlayerPrefs en IndexedDB antes de iniciar Unity
+        async function setCoinsIndexedDB(value) {
+            return new Promise((resolve, reject) => {
+                try {
+                    // Abrir IndexedDB de Unity WebGL (IDBFS)
+                    let request = indexedDB.open(window.location.origin + "_playerprefs");
+                    request.onsuccess = function(event) {
+                        let db = event.target.result;
+                        let storeNames = Array.from(db.objectStoreNames);
+                        if (storeNames.length === 0) { resolve(false); return; }
+
+                        let tx = db.transaction(storeNames[0], "readwrite");
+                        let store = tx.objectStore(storeNames[0]);
+
+                        // Abrir todos los registros
+                        let cursorRequest = store.openCursor();
+                        cursorRequest.onsuccess = function(e) {
+                            let cursor = e.target.result;
+                            if (!cursor) { resolve(true); return; }
+
+                            let data = cursor.value;
+
+                            // Si es objeto con monedas, actualizar
+                            if (data && typeof data === 'object' && ('coins' in data || 'Coins' in data)) {
+                                data.coins = value;
+                                cursor.update(data);
+                                console.log("[IndexedDB] Monedas sobrescritas:", value);
+                            }
+
+                            cursor.continue();
+                        };
+                    };
+                    request.onerror = function() { resolve(false); };
+                } catch (err) { reject(err); }
+            });
         }
 
-        // 3) Ahora iniciar Unity
-        window.gameInstance = UnityLoader.instantiate(
-            "gameContainer",
-            "Build/SnowRider3D-gd-1.json",
-            {
-                onProgress: UnityProgress,
-                Module: {
-                    onRuntimeInitialized: function() {
-                        UnityProgress(window.gameInstance, "complete");
-                        console.log("[Unity] Juego cargado y listo.");
+        // Esperar un pequeño delay para asegurar que IndexedDB esté listo
+        setTimeout(async () => {
+            try { await setCoinsIndexedDB(monedas); } catch(e){ console.warn(e); }
+
+            // 3) Iniciar Unity
+            window.gameInstance = UnityLoader.instantiate(
+                "gameContainer",
+                "Build/SnowRider3D-gd-1.json",
+                {
+                    onProgress: UnityProgress,
+                    Module: {
+                        onRuntimeInitialized: function() {
+                            UnityProgress(window.gameInstance, "complete");
+                            console.log("[Unity] Juego cargado y listo con monedas sobrescritas:", monedas);
+                        }
                     }
                 }
-            }
-        );
+            );
+        }, 100); // delay mínimo
     });
     </script>
     <!-- ======================================================================== -->
 
 </head>
-<body style="overflow:hidden;padding:0px;margin:0px;">
+<body style="overflow:hidden;padding:0;margin:0;">
     <div class="webgl-content">
-        <div id="gameContainer" style="width: 960px; height: 600px; margin: auto"></div>
+        <div id="gameContainer" style="width:960px; height:600px; margin:auto;"></div>
     </div>
 </body>
 </html>
