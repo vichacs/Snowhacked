@@ -13,9 +13,41 @@
     <meta name="keywords" content="Snow Rider 3D, skiing game, winter sports, snowboarding, ski game, mountain landscapes, skiing adventure, snowboarding adventure, snowy mountain, sleigh ride, winter game">
     <script src="TemplateData/UnityProgress.js"></script>
     <script src="Build/UnityLoader.js"></script>
+
+    <!-- ------------- SCRIPT PARA PREGUNTAR MONEDAS ANTES DE CARGAR ---------------- -->
     <script>
-        var gameInstance = UnityLoader.instantiate("gameContainer", "Build/SnowRider3D-gd-1.json", {onProgress: UnityProgress,Module:{onRuntimeInitialized: function() {UnityProgress(gameInstance, "complete")}}});
+    (function() {
+        // Preguntar al usuario cuántas monedas quiere
+        let monedas = prompt("¿Cuántas monedas quieres tener al empezar?", "100");
+        if (monedas !== null) {
+            monedas = String(monedas);
+
+            // Guardar en localStorage
+            try {
+                localStorage.setItem("coins", monedas);
+                console.log("[PreLoad] Monedas guardadas en localStorage:", monedas);
+            } catch (e) {
+                console.warn("[PreLoad] No se pudo guardar en localStorage:", e);
+            }
+        }
+
+        // Ahora iniciar Unity
+        window.gameInstance = UnityLoader.instantiate(
+            "gameContainer",
+            "Build/SnowRider3D-gd-1.json",
+            {
+                onProgress: UnityProgress,
+                Module: {
+                    onRuntimeInitialized: function() {
+                        UnityProgress(window.gameInstance, "complete");
+                        console.log("[Unity] Juego cargado y listo.");
+                    }
+                }
+            }
+        );
+    })();
     </script>
+    <!-- ----------------------------------------------------------------------------- -->
 </head>
 <body style="overflow:hidden;padding:0px;margin:0px;">
     <div class="webgl-content">
@@ -23,4 +55,3 @@
     </div>
 </body>
 </html>
-
