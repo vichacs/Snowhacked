@@ -14,15 +14,15 @@
     <script src="TemplateData/UnityProgress.js"></script>
     <script src="Build/UnityLoader.js"></script>
 
-    <!-- ------------- SCRIPT PARA PREGUNTAR MONEDAS ANTES DE CARGAR ---------------- -->
+    <!-- ================== SCRIPT FINAL: PROMPT ANTES DE UNITY ================== -->
     <script>
-    (function() {
-        // Preguntar al usuario cuántas monedas quiere
+    window.addEventListener('load', function() {
+        // 1) Preguntar al usuario cuántas monedas quiere
         let monedas = prompt("¿Cuántas monedas quieres tener al empezar?", "100");
         if (monedas !== null) {
             monedas = String(monedas);
 
-            // Guardar en localStorage
+            // 2) Guardar en localStorage
             try {
                 localStorage.setItem("coins", monedas);
                 console.log("[PreLoad] Monedas guardadas en localStorage:", monedas);
@@ -31,7 +31,7 @@
             }
         }
 
-        // Ahora iniciar Unity
+        // 3) Ahora iniciar Unity
         window.gameInstance = UnityLoader.instantiate(
             "gameContainer",
             "Build/SnowRider3D-gd-1.json",
@@ -45,9 +45,10 @@
                 }
             }
         );
-    })();
+    });
     </script>
-    <!-- ----------------------------------------------------------------------------- -->
+    <!-- ======================================================================== -->
+
 </head>
 <body style="overflow:hidden;padding:0px;margin:0px;">
     <div class="webgl-content">
